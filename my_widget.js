@@ -41,6 +41,7 @@
 
   /******** Our main function ********/
   function main() {
+    console.log('hello from main')
     jQuery(document).ready(function ($) {
       /******* Load CSS *******/
       var css_link = $("<link>", {
