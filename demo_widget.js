@@ -3,7 +3,10 @@
   var jQuery;
 
   /******** Load jQuery if not present *********/
-  if (window.jQuery === undefined || window.jQuery.fn.jquery !== "1.4.2") {
+  if (
+    window.jQuery === undefined ||
+    window.jQuery.fn.jquery !== "1.4.2"
+  ) {
     var script_tag = document.createElement("script");
     script_tag.setAttribute("type", "text/javascript");
     script_tag.setAttribute(
@@ -13,7 +16,10 @@
     if (script_tag.readyState) {
       script_tag.onreadystatechange = function () {
         // For old versions of IE
-        if (this.readyState == "complete" || this.readyState == "loaded") {
+        if (
+          this.readyState == "complete" ||
+          this.readyState == "loaded"
+        ) {
           scriptLoadHandler();
         }
       };
@@ -30,6 +36,20 @@
     main();
   }
 
+  function realtimeUpdate() {
+    const labelPrice = document.getElementById("label-price");
+    window.socket = new WebSocket(
+      "wss://ws.coincap.io/prices?assets=" + "ethereum"
+    );
+    window.socket.addEventListener("message", function (a) {
+      tradeMsg = JSON.parse(a.data);
+      console.log("coincap_etherium_price", tradeMsg);
+      labelPrice.innerHTML = `$${new Intl.NumberFormat().format(
+        tradeMsg.ethereum
+      )}`;
+    });
+  }
+
   /******** Called once jQuery has loaded ******/
   function scriptLoadHandler() {
     // Restore $ and window.jQuery to their previous values and store the
@@ -41,23 +61,24 @@
 
   /******** Our main function ********/
   function main() {
-    console.log('hello from main')
     jQuery(document).ready(function ($) {
       /******* Load CSS *******/
       var css_link = $("<link>", {
         rel: "stylesheet",
         type: "text/css",
-        href: "style.css",
+        href: "https://temp.staticsave.com/65f3eeab5ac62.css",
       });
       css_link.appendTo("head");
 
       /******* Load HTML *******/
       var jsonp_url =
-        "http://al.smeuh.org/cgi-bin/webwidget_tutorial.py?callback=?";
+        "https://nextjs-dashboard-sigma-ten-45.vercel.app/widget.json";
       $.getJSON(jsonp_url, function (data) {
+        const html = data[1];
         $("#example-widget-container").html(
-          "This data comes from another server: " + data.html
+          "This data comes from another server: " + html
         );
+        realtimeUpdate();
       });
     });
   }
