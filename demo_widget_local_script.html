@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h1>My Widgets</h1>
+    <!-- <div class="spotonchain-web-widget" data-id="1"></div> -->
+    <div class="spotonchain-web-widget" data-id="2"></div>
+    <div class="spotonchain-web-widget" data-id="3"></div>
+    <div class="spotonchain-web-widget" data-id="2"></div>
+    <script>
+      (function () {
+        // Localize jQuery variable
+        var jQuery;
+
+        /******** Load jQuery if not present *********/
+        if (
+          window.jQuery === undefined ||
+          window.jQuery.fn.jquery !== "3.7.1"
+        ) {
+          var script_tag = document.createElement("script");
+          script_tag.setAttribute("type", "text/javascript");
+          script_tag.setAttribute(
+            "src",
+            "https://code.jquery.com/jquery-3.7.1.js"
+          );
+          if (script_tag.readyState) {
+            script_tag.onreadystatechange = function () {
+              // For old versions of IE
+              if (
+                this.readyState == "complete" ||
+                this.readyState == "loaded"
+              ) {
+                scriptLoadHandler();
+              }
+            };
+          } else {
+            script_tag.onload = scriptLoadHandler;
+          }
+          // Try to find the head, otherwise default to the documentElement
+          (
+            document.getElementsByTagName("head")[0] || document.documentElement
+          ).appendChild(script_tag);
+        } else {
+          // The jQuery version on the window is the one we want to use
+          jQuery = window.jQuery;
+          main();
+        }
+
+        function realtimeUpdate() {
+          const labelPrice = document.getElementById("label-price");
+          window.socket = new WebSocket(
+            "wss://ws.coincap.io/prices?assets=" + "ethereum"
+          );
+          window.socket.addEventListener("message", function (a) {
+            tradeMsg = JSON.parse(a.data);
+            console.log("coincap_etherium_price", tradeMsg);
+            if (labelPrice) {
+              labelPrice.innerHTML = `$${new Intl.NumberFormat().format(
+                tradeMsg.ethereum
+              )}`;
+            }
+          });
+        }
+
+        /******** Called once jQuery has loaded ******/
+        function scriptLoadHandler() {
+          // Restore $ and window.jQuery to their previous values and store the
+          // new jQuery in our local jQuery variable
+          jQuery = window.jQuery.noConflict(true);
+          // Call our main function
+          main();
+        }
+
+        const formatDisplayNum = (
+          num,
+          locale = "en",
+          noFractionDigits = false,
+          fractionDigits = 3,
+          maxZeroFractionDigits = 4
+        ) => {
+          const prefix = Number(num) >= 0 ? "" : "-";
+          num = Math.abs(num);
+
+          if (num > 1e12) {
+            const formatter = new Intl.NumberFormat(locale, {
+              notation: "compact",
+              maximumFractionDigits: fractionDigits,
+            });
+            return `${prefix}${formatter.format(num.toFixed(fractionDigits))}`;
+          }
+
+          if (num < 0.099 && num > 0) {
+            if (num < Number(`1e-${maxZeroFractionDigits}`)) {
+              let numStr = num.toString();
+              if (numStr?.indexOf("e") > -1) {
+                const parts = numStr.split("e");
+                numStr = `0.${"0".repeat(
+                  Math.abs(parts[1]) - 1
+                )}${parts[0].replace(".", "")}`;
+              }
+              const parts = numStr.split(".");
+              const integerStr = parts[0];
+
+              let decimalStr = parts[1];
+
+              const zeroCount = (
+                decimalStr?.match(/^0+/)?.[0]?.length || 0
+              ).toString();
+
+              decimalStr = Number(decimalStr).toString();
+              while (decimalStr?.length < fractionDigits) {
+                decimalStr += "0";
+              }
+              if (decimalStr?.length > fractionDigits) {
+                decimalStr = Number(`0.${decimalStr}`)
+                  .toFixed(fractionDigits + 1)
+                  .split(".")[1];
+              }
+
+              return `${integerStr}.0${convertNumToSubscriptStr(
+                zeroCount
+              )}${Number(decimalStr)}`;
+            }
+            const expo = Number.parseFloat(num).toExponential(1).split("e")[1];
+            return Number(num).toFixed(Math.abs(expo) + fractionDigits);
+          } else {
+            let minimumFractionDigits = num % 1 == 0 ? 0 : fractionDigits;
+            let formatter = Intl.NumberFormat(locale, {
+              notation: "compact",
+              minimumFractionDigits: noFractionDigits
+                ? undefined
+                : minimumFractionDigits,
+            });
+            return `${prefix}${formatter.format(Number(num).toFixed(3))}`;
+          }
+        };
+
+        //for address balance
+        const getTotalValue = (tokens) => {
+          return tokens?.reduce((total, token) => total + token.value, 0);
+        };
+
+        //for address balance
+        const getTokenDonutList = (tokens, globalTokenDict) => {
+          //item format:{ token: string, donut: {value: number, color: DonutColors} }
+          return (
+            tokens?.map((it, idx) => {
+              const { logo_url = DefaultLogoTokenLink, name } =
+                globalTokenDict[it.token] || {};
+              return {
+                token: { symbol: it.token },
+                donut: {
+                  value: it.value,
+                  color: DonutColors[idx],
+                  logo_url,
+                  name,
+                  symbol: it.token,
+                },
+              };
+            }) || []
+          );
+        };
+
+        const genGlobalTokenDict = (globalData) => {
+          const res = {};
+          for (let i = 0; i < globalData?.token_list.length; i++) {
+            res[globalData?.token_list[i].symbol] = globalData?.token_list[i];
+          }
+          return res;
+        };
+
+        const WIDGET_SIGNAL = 1;
+        const WIDGET_SMART_MONEY_INFLOW = 2;
+        const WIDGET_SMART_MONEY_OUTFLOW = 3;
+        const DefaultLogoTokenLink =
+          "https://soc-app-assets.spotonchain.com/5266_2e2821983e.png";
+
+        const DonutColors = [
+          "#2F54EB",
+          "#574AE2",
+          "#D7F171",
+          "#13C2C2",
+          "#1A99F4",
+          "#2ED080",
+          "#FFA666",
+          "#ED5906",
+          "#D14BE7",
+          "#FC444E",
+        ];
+
+        // AJAX call 1
+        function ajaxCall(url) {
+          return new Promise(function (resolve, reject) {
+            let xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+              if (this.readyState == 4) {
+                if (this.status == 200) resolve(this.responseText);
+                else reject("Call 1 Failed");
+              }
+            };
+            xhttp.open("GET", url);
+            xhttp.send();
+          });
+        }
+
+        const loadSmartMoneyFlowWidget = ($, widgetTag, widgetId) => {
+          var globalConfig =
+            "https://api.spotonchain.com/api/general/get_global_config";
+          var html_content =
+            "https://nextjs-dashboard-sigma-ten-45.vercel.app/soc-smf-container.json";
+          var apiTopActiveTokens =
+            "https://testapi.spotonchain.com/api/smart_trader/get_top_active_tokens";
+          Promise.all([
+            ajaxCall(globalConfig),
+            ajaxCall(html_content),
+            ajaxCall(apiTopActiveTokens),
+          ])
+            .then(function (values) {
+              const globalTokenDict = genGlobalTokenDict(
+                JSON.parse(values[0])?.["data"]
+              );
+              // todo request html by widgetId
+              const htmlContent = JSON.parse(values[1])?.["2"];
+              const topTokensData = JSON.parse(values[2])?.["data"];
+              const dataRender = {
+                totalBalanceTopBought: getTotalValue(
+                  topTokensData?.top_bought_tokens
+                ),
+                totalBalanceTopSold: getTotalValue(
+                  topTokensData?.top_sold_tokens
+                ),
+                topBoughtTokens: getTokenDonutList(
+                  topTokensData?.top_bought_tokens,
+                  globalTokenDict
+                ),
+                topSoldTokens: getTokenDonutList(
+                  topTokensData?.top_sold_tokens,
+                  globalTokenDict
+                ),
+              };
+              const arrayRender =
+                widgetId === WIDGET_SMART_MONEY_OUTFLOW
+                  ? dataRender.topSoldTokens
+                  : dataRender.topBoughtTokens;
+              const color =
+                widgetId === WIDGET_SMART_MONEY_OUTFLOW ? "#FF5858" : "#2ED080";
+              const title =
+                widgetId === WIDGET_SMART_MONEY_OUTFLOW
+                  ? "Top Smart Money Outflow"
+                  : "Top Smart Money Inflow";
+              const maxTopSold = arrayRender[0].donut?.value;
+              htmlContent.data = dataRender;
+              widgetTag.html(htmlContent);
+              widgetTag.find(".soc-smf-title").html(title);
+              widgetTag.find(".soc-smf-volume-bar").each(function (i) {
+                console.log("index", i);
+                $(this)
+                  .css(
+                    "width",
+                    `${(arrayRender[i].donut?.value / maxTopSold) * 100}%`
+                  )
+                  .css("background-color", color);
+              });
+              widgetTag.find(".soc-smf-token-logo").each(function (i) {
+                $(this).attr("src", arrayRender[i].donut?.logo_url);
+              });
+              widgetTag.find(".soc-smf-volume-number").each(function (i) {
+                $(this).html(
+                  `$${formatDisplayNum(arrayRender[i].donut?.value, "en")}`
+                );
+              });
+            })
+            .catch(function (reason) {
+              // one of the AJAX calls failed
+              console.log(reason);
+            });
+        };
+
+        /******** Our main function ********/
+        function main() {
+          jQuery(document).ready(function ($) {
+            /******* Load CSS *******/
+            let css_link = $("<link>", {
+              rel: "stylesheet",
+              type: "text/css",
+              href: "https://nextjs-dashboard-sigma-ten-45.vercel.app/soc-widget.css",
+            });
+            css_link.appendTo("head");
+
+            /******* Load HTML *******/
+            $(".spotonchain-web-widget").each(function (index) {
+              var id = $(this).data("id");
+              switch (id) {
+                case WIDGET_SIGNAL:
+                case WIDGET_SMART_MONEY_INFLOW:
+                  loadSmartMoneyFlowWidget($, $(this), id);
+                case WIDGET_SMART_MONEY_OUTFLOW:
+                  loadSmartMoneyFlowWidget($, $(this), id);
+                  break;
+              }
+            });
+          });
+        }
+      })(); // We call our anonymous function immediately
+    </script>
+  </body>
+</html>
