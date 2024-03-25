@@ -1,11 +1,24 @@
 <!DOCTYPE html>
 <html>
   <body>
-    <h1>My Widgets</h1>
-    <!-- <div class="spotonchain-web-widget" data-id="1"></div> -->
-    <div class="spotonchain-web-widget" data-id="2"></div>
-    <div class="spotonchain-web-widget" data-id="3"></div>
-    <div class="spotonchain-web-widget" data-id="2"></div>
+    <h1>SOC Widgets</h1>
+    <div
+      class="spotonchain-web-widget"
+      data-id="1"
+      data-article-num="10"
+      data-news-length="100"
+      data-show-thumbnail="1"
+      data-widget-size="small"
+    ></div>
+    <div
+      class="spotonchain-web-widget"
+      data-id="2"
+      data-row-num="3"
+      data-flow="out"
+      data-widget-size="small"
+    ></div>
+    <!-- <div class="spotonchain-web-widget" data-id="3"></div>
+    <div class="spotonchain-web-widget" data-id="2"></div> -->
     <script>
       (function () {
         // Localize jQuery variable
@@ -168,12 +181,37 @@
           return res;
         };
 
+        const mappingSignalType = (signal_type, styles) => {
+          return {
+            [OnchainSignalType.BUY_SIGNAL]: {
+              title: "Inflow",
+              color: "#2ED080",
+              "bg-color": "rgba(82, 208, 146, 0.16)",
+            },
+            [OnchainSignalType.NORMAL]: {
+              title: "",
+              color: "",
+              "bg-color": "",
+            },
+            [OnchainSignalType.SELL_SIGNAL]: {
+              title: "Outflow",
+              color: "#FF5858",
+              "bg-color": "rgba(255, 88, 88, 0.12)",
+            },
+            [OnchainSignalType.SMART_TRADER]: {
+              title: "Smart",
+              color: "#D14BE7",
+              "bg-color": "rgba(209, 75, 231, 0.16)",
+            },
+          }[signal_type];
+        };
+
         const WIDGET_SIGNAL = 1;
-        const WIDGET_SMART_MONEY_INFLOW = 2;
-        const WIDGET_SMART_MONEY_OUTFLOW = 3;
+        const WIDGET_SMART_MONEY = 2;
         const DefaultLogoTokenLink =
           "https://soc-app-assets.spotonchain.com/5266_2e2821983e.png";
-
+        const DefaultWalletAvatar =
+          "https://platform.spotonchain.ai/icons/wallet_new.svg";
         const DonutColors = [
           "#2F54EB",
           "#574AE2",
@@ -187,7 +225,193 @@
           "#FC444E",
         ];
 
-        // AJAX call 1
+        class WidgetSize {
+          static SMALL = "small";
+          static MEDIUM = "medium";
+          static LARGE = "large";
+        }
+
+        class OnchainSignalType {
+          static NORMAL = 0;
+          static SMART_TRADER = 1;
+          static BUY_SIGNAL = 2;
+          static SELL_SIGNAL = 3;
+        }
+
+        class OnChainSignalTagType {
+          static TOKEN = 1;
+          static ADDRESS = 2;
+          static TXN_HASH = 3;
+          static SEO_TAGS = 4;
+        }
+
+        class OnchainLabelWalletTagType {
+          static TOKEN = 1;
+          static NOTE = 2;
+          static EARN_AMOUNT = 3;
+          static RELATED_ADDRESS = 4;
+          static RELATED_ORG = 5;
+        }
+
+        class ENodeType {
+          static QUOTE = "quote";
+          static PARAGRAPH = "paragraph";
+          static LINK = "link";
+          static BLOCK_QUOTE = "block-quote";
+          static BULLETED_LIST = "bulleted-list";
+          static HEADING_ONE = "heading-one";
+          static HEADING_TWO = "heading-two";
+          static LIST_ITEM = "list-item";
+          static NUMBER_LIST = "numbered-list";
+          static IMAGE = "image";
+        }
+
+        const getWidgetWidth = (size) => {
+          switch (size) {
+            case WidgetSize.SMALL:
+              return "360px";
+            case WidgetSize.MEDIUM:
+              return "480px";
+            case WidgetSize.LARGE:
+              return "720px";
+            default:
+              return "360px";
+          }
+        };
+
+        const convertTimeDisplayHighlight = (time, locale) => {
+          if (isNaN(time)) {
+            return time; // Return unchanged if not a valid number
+          }
+
+          const postedDate = new Date(time * 1000);
+          const currentDay = new Date();
+          const diffTime = Math.abs(currentDay - postedDate);
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+          const diffMin = Math.floor(diffTime / (1000 * 60));
+          if (diffDays < 2) {
+            if (diffHours < 1) {
+              return `${diffMin}m ago`;
+            } else {
+              return `${diffHours}h ago`;
+            }
+          } else {
+            return postedDate.toLocaleDateString(locale, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            });
+          }
+        };
+
+        const checkYoutubeLink = (url) => {
+          const regExpMatchArray = url.match(YOUTUBE_REGEX);
+
+          const isYoutubeLink = !!regExpMatchArray;
+
+          let id = "";
+
+          if (regExpMatchArray) {
+            id = regExpMatchArray[regExpMatchArray.length - 1];
+          }
+
+          return {
+            id,
+            isYoutubeLink,
+          };
+        };
+
+        const getIdTiktokLink = (uri) => {
+          const basicParsed = TIKTOK_REGEX.exec(uri);
+          if (basicParsed && basicParsed.length > 2) {
+            return basicParsed[2];
+          }
+
+          return undefined;
+        };
+
+        const checkTiktokLink = (url) => {
+          const basicParsed = TIKTOK_REGEX.exec(url);
+          let id = "";
+          let isTiktokLink = false;
+
+          if (basicParsed && basicParsed.length > 2) {
+            id = basicParsed[2];
+            isTiktokLink = true;
+          }
+
+          return {
+            id,
+            isTiktokLink,
+          };
+        };
+
+        const shortenDisplayText = (name, max = 8) => {
+          if (name?.length > max) {
+            name = name.substring(0, max - 3) + "...";
+          }
+          return name;
+        };
+
+        const isString = (value) =>
+          typeof value === "string" || value instanceof String;
+
+        function convertDescriptionToHtml(jsonString, newsLength) {
+          const data = JSON.parse(jsonString);
+          let html = "";
+          let isDiv = true;
+          let currentLength = 0;
+          data.forEach((element) => {
+            switch (element.type) {
+              case "paragraph":
+                const tag = isDiv ? "div" : "p";
+                isDiv = false;
+
+                html +=
+                  `<${tag} style="text-align:` +
+                  (element.align || "left") +
+                  "; text-align=right;" +
+                  '">';
+                element.children.forEach((child) => {
+                  let { text, bold, color } = child;
+                  if (!text || currentLength >= newsLength) {
+                    return;
+                  }
+                  if (currentLength + text.length > newsLength) {
+                    text = text.substring(0, newsLength - currentLength);
+                    text += "...";
+                  }
+                  currentLength += text.length;
+
+                  if (bold && color) {
+                    html +=
+                      '<span style="font-weight:bold; color:' +
+                      color +
+                      ';">' +
+                      text +
+                      "</span>";
+                  } else if (bold) {
+                    html +=
+                      '<span style="font-weight:bold;">' + text + "</span>";
+                  } else if (color) {
+                    html +=
+                      '<span style="color:' + color + ';">' + text + "</span>";
+                  } else {
+                    html += text;
+                  }
+                });
+                html += `</${tag}>`;
+                break;
+              // Handle other types if needed
+              default:
+                break;
+            }
+          });
+
+          return html;
+        }
+
         function ajaxCall(url) {
           return new Promise(function (resolve, reject) {
             let xhttp = new XMLHttpRequest();
@@ -202,23 +426,30 @@
           });
         }
 
-        const loadSmartMoneyFlowWidget = ($, widgetTag, widgetId) => {
-          var globalConfig =
+        const loadSmartMoneyFlowWidget = (
+          $,
+          widgetEle,
+          widgetSize,
+          flow,
+          rowNum
+        ) => {
+          rowNum = rowNum || 3;
+          const URL_GLOBAL_CONFIG =
             "https://api.spotonchain.com/api/general/get_global_config";
-          var html_content =
+          const URL_HTML =
             "https://nextjs-dashboard-sigma-ten-45.vercel.app/soc-smf-container.json";
-          var apiTopActiveTokens =
+          const apiTopActiveTokens =
             "https://testapi.spotonchain.com/api/smart_trader/get_top_active_tokens";
           Promise.all([
-            ajaxCall(globalConfig),
-            ajaxCall(html_content),
+            ajaxCall(URL_GLOBAL_CONFIG),
+            ajaxCall(URL_HTML),
             ajaxCall(apiTopActiveTokens),
           ])
             .then(function (values) {
               const globalTokenDict = genGlobalTokenDict(
                 JSON.parse(values[0])?.["data"]
               );
-              // todo request html by widgetId
+              // todo request html by flow
               const htmlContent = JSON.parse(values[1])?.["2"];
               const topTokensData = JSON.parse(values[2])?.["data"];
               const dataRender = {
@@ -238,41 +469,180 @@
                 ),
               };
               const arrayRender =
-                widgetId === WIDGET_SMART_MONEY_OUTFLOW
+                flow === "out"
                   ? dataRender.topSoldTokens
                   : dataRender.topBoughtTokens;
-              const color =
-                widgetId === WIDGET_SMART_MONEY_OUTFLOW ? "#FF5858" : "#2ED080";
+              const color = flow === "out" ? "#FF5858" : "#2ED080";
               const title =
-                widgetId === WIDGET_SMART_MONEY_OUTFLOW
+                flow === "out"
                   ? "Top Smart Money Outflow"
                   : "Top Smart Money Inflow";
               const maxTopSold = arrayRender[0].donut?.value;
-              htmlContent.data = dataRender;
-              widgetTag.html(htmlContent);
-              widgetTag.find(".soc-smf-title").html(title);
-              widgetTag.find(".soc-smf-volume-bar").each(function (i) {
-                console.log("index", i);
-                $(this)
-                  .css(
-                    "width",
-                    `${(arrayRender[i].donut?.value / maxTopSold) * 100}%`
-                  )
-                  .css("background-color", color);
-              });
-              widgetTag.find(".soc-smf-token-logo").each(function (i) {
-                $(this).attr("src", arrayRender[i].donut?.logo_url);
-              });
-              widgetTag.find(".soc-smf-volume-number").each(function (i) {
-                $(this).html(
-                  `$${formatDisplayNum(arrayRender[i].donut?.value, "en")}`
-                );
+
+              widgetEle.html(htmlContent);
+              const width = getWidgetWidth(widgetSize);
+              widgetEle.find(".soc-smf-container").css("width", width);
+
+              widgetEle.find(".soc-smf-title").html(title);
+              widgetEle.find(".soc-smf-flow-row").each(function (i) {
+                $(this).css("display", i < rowNum ? "flex" : "none");
+                console.log("arrayRender[i]", arrayRender[i]);
+                if (i < rowNum) {
+                  $(this)
+                    .find(".soc-smf-token-name")
+                    .html(arrayRender[i].token?.symbol);
+                  $(this)
+                    .find(".soc-smf-token-logo")
+                    .attr("src", arrayRender[i].donut?.logo_url);
+                  $(this)
+                    .find(".soc-smf-volume-bar")
+                    .css(
+                      "width",
+                      `${(arrayRender[i].donut?.value / maxTopSold) * 100}%`
+                    );
+                  $(this)
+                    .find(".soc-smf-volume-bar")
+                    .css("background-color", color);
+                  $(this)
+                    .find(".soc-smf-volume-number")
+                    .html(
+                      `$${formatDisplayNum(arrayRender[i].donut?.value, "en")}`
+                    );
+                }
               });
             })
             .catch(function (reason) {
               // one of the AJAX calls failed
-              console.log(reason);
+              console.log("ajax Failed:", reason);
             });
+        };
+
+        const loadSignalWidget = (
+          $,
+          widgetEle,
+          widgetSize,
+          widgetId,
+          articleNum,
+          newsLength,
+          showThumbnail
+        ) => {
+          articleNum = articleNum || 1;
+          const URL_GLOBAL_CONFIG =
+            "https://api.spotonchain.com/api/general/get_global_config";
+          const URL_HTML =
+            "https://nextjs-dashboard-sigma-ten-45.vercel.app/soc-signal-container.json";
+          const URL_LATEST_SIGNAL = `https://api.spotonchain.com/api/onchain/get_latest_signals?last_publish_time=0&limit=${articleNum}`;
+
+          Promise.all([
+            ajaxCall(URL_HTML),
+            ajaxCall(URL_LATEST_SIGNAL),
+            ajaxCall(URL_GLOBAL_CONFIG),
+          ]).then(function (values) {
+            // todo request html by widgetId
+            const htmlContent = JSON.parse(values[0])?.[widgetId];
+            const signals = JSON.parse(values[1])?.["data"]?.["latest_signals"];
+            const globalTokenDict = genGlobalTokenDict(
+              JSON.parse(values[2])?.["data"]
+            );
+            widgetEle.html(htmlContent);
+            const width = getWidgetWidth(widgetSize);
+            widgetEle.find(".soc-widget-signals-container").css("width", width);
+
+            const signalEle = widgetEle.find(".soc-signal-signal-item");
+            const signalsContainer = widgetEle.find(
+              ".soc-widget-signals-container"
+            );
+            for (let i = 0; i < signals.length; i++) {
+              const signal = signals[i];
+              if (signal) {
+                const {
+                  title,
+                  description,
+                  tags,
+                  publish_time,
+                  txn_data_details,
+                } = signal;
+                const filteredToken = tags?.filter(
+                  ({ tag_type }) => tag_type === OnchainLabelWalletTagType.TOKEN
+                );
+                const timeAgo = convertTimeDisplayHighlight(publish_time, "en");
+                const addressList = txn_data_details?.address_list;
+                const contents = convertDescriptionToHtml(
+                  description,
+                  newsLength
+                );
+                const signalType = mappingSignalType(signal.signal_type);
+                let currentElement;
+                if (i === 0) {
+                  currentElement = signalEle;
+                } else {
+                  currentElement = signalEle.clone();
+                  signalsContainer.append(currentElement);
+                }
+                // update signal content
+                if (showThumbnail) {
+                  const thumbnailEle = currentElement.find(
+                    ".soc-signal-thumbnail"
+                  );
+                  if (widgetSize === WidgetSize.SMALL) {
+                    widgetEle
+                      .find(".soc-signal-content")
+                      .css("flex-direction", "column");
+                    thumbnailEle.css("width", "100%");
+                  } else {
+                    thumbnailEle.css("max-width", "40%");
+                  }
+
+                  thumbnailEle.css("display", "block");
+                  currentElement
+                    .find(".soc-signal-thumbnail-img")
+                    .attr("src", signal.seo_banner);
+                } else {
+                  currentElement
+                    .find(".soc-signal-thumbnail")
+                    .css("display", "none");
+                }
+                console.log(
+                  "globalTokenDict",
+                  globalTokenDict,
+                  filteredToken[0].tag.toUpperCase()
+                );
+                currentElement
+                  .find(".soc-signal-soc-signal-token-tag-img")
+                  .attr(
+                    "src",
+                    globalTokenDict?.[filteredToken[0].tag.toUpperCase()]
+                      ?.logo_url || DefaultLogoTokenLink
+                  );
+
+                currentElement
+                  .find(".soc-signal-tag-bg")
+                  .css("background-color", signalType["bg-color"]);
+                currentElement
+                  .find(".soc-signal-tag-title")
+                  .html(signalType.title)
+                  .css("color", signalType.color);
+
+                currentElement.find(".soc-signal-title").html(title);
+                currentElement.find(".soc-signal-time-ago").html(timeAgo);
+                if (addressList?.length > 0) {
+                  let firstBox = currentElement.find(
+                    ".soc-signal-address-related"
+                  );
+                  firstBox
+                    .find(".soc-signal-address-related-avatar")
+                    .attr(
+                      "src",
+                      addressList[0].logo_url || DefaultWalletAvatar
+                    );
+                  firstBox
+                    .find(".soc-signal-label")
+                    .html(shortenDisplayText(addressList[0].address, 12));
+                }
+                currentElement.find(".soc-signal-description").html(contents);
+              }
+            }
+          });
         };
 
         /******** Our main function ********/
@@ -288,13 +658,33 @@
 
             /******* Load HTML *******/
             $(".spotonchain-web-widget").each(function (index) {
-              var id = $(this).data("id");
+              let id = $(this).data("id");
+              let rowNum = $(this).data("row-num");
+              let flow = $(this).data("flow");
+              let showThumbnail = $(this).data("show-thumbnail");
+              let widgetSize = $(this).data("widget-size");
               switch (id) {
                 case WIDGET_SIGNAL:
-                case WIDGET_SMART_MONEY_INFLOW:
-                  loadSmartMoneyFlowWidget($, $(this), id);
-                case WIDGET_SMART_MONEY_OUTFLOW:
-                  loadSmartMoneyFlowWidget($, $(this), id);
+                  let articleNum = $(this).data("article-num");
+                  let newsLength = $(this).data("news-length");
+                  loadSignalWidget(
+                    $,
+                    $(this),
+                    widgetSize,
+                    id,
+                    articleNum,
+                    newsLength,
+                    showThumbnail
+                  );
+                  break;
+                case WIDGET_SMART_MONEY:
+                  loadSmartMoneyFlowWidget(
+                    $,
+                    $(this),
+                    widgetSize,
+                    flow,
+                    rowNum
+                  );
                   break;
               }
             });
