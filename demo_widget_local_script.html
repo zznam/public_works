@@ -5,17 +5,17 @@
     <div
       class="spotonchain-web-widget"
       data-id="1"
-      data-article-num="10"
+      data-widget-size="medium"
+      data-article-num="4"
       data-news-length="100"
       data-show-thumbnail="1"
-      data-widget-size="small"
     ></div>
     <div
       class="spotonchain-web-widget"
       data-id="2"
-      data-row-num="3"
-      data-flow="out"
       data-widget-size="small"
+      data-row-num="5"
+      data-flow="out"
     ></div>
     <!-- <div class="spotonchain-web-widget" data-id="3"></div>
     <div class="spotonchain-web-widget" data-id="2"></div> -->
@@ -266,7 +266,7 @@
           static IMAGE = "image";
         }
 
-        const getWidgetWidth = (size) => {
+        const getMinWidgetWidth = (size) => {
           switch (size) {
             case WidgetSize.SMALL:
               return "360px";
@@ -480,17 +480,22 @@
               const maxTopSold = arrayRender[0].donut?.value;
 
               widgetEle.html(htmlContent);
-              const width = getWidgetWidth(widgetSize);
-              widgetEle.find(".soc-smf-container").css("width", width);
+              const width = getMinWidgetWidth(widgetSize);
+              widgetEle.find(".soc-smf-container").css("min-width", width);
 
               widgetEle.find(".soc-smf-title").html(title);
               widgetEle.find(".soc-smf-flow-row").each(function (i) {
-                $(this).css("display", i < rowNum ? "flex" : "none");
+                $(this)
+                  .css("display", i < rowNum ? "flex" : "none")
+                  .attr(
+                    "title",
+                    shortenDisplayText(arrayRender[i].token?.symbol, 5)
+                  );
                 console.log("arrayRender[i]", arrayRender[i]);
                 if (i < rowNum) {
                   $(this)
                     .find(".soc-smf-token-name")
-                    .html(arrayRender[i].token?.symbol);
+                    .html(shortenDisplayText(arrayRender[i].token?.symbol, 5));
                   $(this)
                     .find(".soc-smf-token-logo")
                     .attr("src", arrayRender[i].donut?.logo_url);
@@ -545,8 +550,10 @@
               JSON.parse(values[2])?.["data"]
             );
             widgetEle.html(htmlContent);
-            const width = getWidgetWidth(widgetSize);
-            widgetEle.find(".soc-widget-signals-container").css("width", width);
+            const width = getMinWidgetWidth(widgetSize);
+            widgetEle
+              .find(".soc-widget-signals-container")
+              .css("min-width", width);
 
             const signalEle = widgetEle.find(".soc-signal-signal-item");
             const signalsContainer = widgetEle.find(

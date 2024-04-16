@@ -8,7 +8,6 @@
   box-sizing: border-box;
 }
 
-
 .soc-smf-container {
   min-width: 360px;
   padding: 1rem;
@@ -51,6 +50,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
 }
 
@@ -144,8 +144,8 @@
   border-width: 0.03125rem;
   align-self: stretch;
   flex-shrink: 0;
-  width: 80%;
-  height: 1.25rem;
+  width: 0%;
+  height: 100%;
   position: relative;
 }
 
@@ -161,5 +161,5 @@
   line-height: var(--body-bodymediumbold-line-height, 1.25rem);
   font-weight: var(--body-bodymediumbold-font-weight, 800);
   position: relative;
-  width: 5rem;
+  width: 6rem;
 }
