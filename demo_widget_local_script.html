@@ -430,6 +430,8 @@
           $,
           widgetEle,
           widgetSize,
+          responsive,
+          darkMode,
           flow,
           rowNum
         ) => {
@@ -481,7 +483,11 @@
 
               widgetEle.html(htmlContent);
               const width = getMinWidgetWidth(widgetSize);
-              widgetEle.find(".soc-smf-container").css("min-width", width);
+              if (Number(responsive)) {
+                widgetEle.find(".soc-smf-container").css("min-width", width);
+              } else {
+                widgetEle.find(".soc-smf-container").css("width", width);
+              }
 
               widgetEle.find(".soc-smf-title").html(title);
               widgetEle.find(".soc-smf-flow-row").each(function (i) {
@@ -491,7 +497,6 @@
                     "title",
                     shortenDisplayText(arrayRender[i].token?.symbol, 5)
                   );
-                console.log("arrayRender[i]", arrayRender[i]);
                 if (i < rowNum) {
                   $(this)
                     .find(".soc-smf-token-name")
@@ -526,6 +531,8 @@
           $,
           widgetEle,
           widgetSize,
+          responsive,
+          darkMode,
           widgetId,
           articleNum,
           newsLength,
@@ -551,9 +558,15 @@
             );
             widgetEle.html(htmlContent);
             const width = getMinWidgetWidth(widgetSize);
-            widgetEle
-              .find(".soc-widget-signals-container")
-              .css("min-width", width);
+            if (Number(responsive)) {
+              widgetEle
+                .find(".soc-widget-signals-container")
+                .css("min-width", width);
+            } else {
+              widgetEle
+                .find(".soc-widget-signals-container")
+                .css("width", width);
+            }
 
             const signalEle = widgetEle.find(".soc-signal-signal-item");
             const signalsContainer = widgetEle.find(
@@ -670,6 +683,8 @@
               let flow = $(this).data("flow");
               let showThumbnail = $(this).data("show-thumbnail");
               let widgetSize = $(this).data("widget-size");
+              let responsive = $(this).data("widget-responsive");
+              let darkMode = $(this).data("widget-dark-mode");
               switch (id) {
                 case WIDGET_SIGNAL:
                   let articleNum = $(this).data("article-num");
@@ -678,6 +693,8 @@
                     $,
                     $(this),
                     widgetSize,
+                    responsive,
+                    darkMode,
                     id,
                     articleNum,
                     newsLength,
@@ -689,6 +706,8 @@
                     $,
                     $(this),
                     widgetSize,
+                    responsive,
+                    darkMode,
                     flow,
                     rowNum
                   );
